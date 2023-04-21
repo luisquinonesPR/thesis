@@ -1,4 +1,5 @@
 
+#%%
 import pandas as pd
 import time
 import requests
@@ -10,6 +11,7 @@ import os
 import numpy as np
 from urllib.error import HTTPError
 
+#%%
 '''
 
 Author: Bruno Conte | bruno.conte@barcelonagse.eu
@@ -20,16 +22,19 @@ events' csv from the raw events' database of GDELT here:
 http://data.gdeltproject.org/events/index.html
 
 '''
-
+os.getcwd() 
+#%%
 # Step 1: put here the directory of the GDELTnowcast on Dropbox:
 dfolder = "data/"
 os.makedirs(dfolder, exist_ok=True)
 
+#%%
 # Step 2: # GDELT (header) names; I manually input it in every
 # iteration. Important, there are two types of headers: before and after March2013.
 cnames_bef = ['GLOBALEVENTID', 'SQLDATE', 'MonthYear', 'Year', 'FractionDate', 'Actor1Code', 'Actor1Name', 'Actor1CountryCode', 'Actor1KnownGroupCode', 'Actor1EthnicCode', 'Actor1Religion1Code', 'Actor1Religion2Code', 'Actor1Type1Code', 'Actor1Type2Code', 'Actor1Type3Code', 'Actor2Code', 'Actor2Name', 'Actor2CountryCode', 'Actor2KnownGroupCode', 'Actor2EthnicCode', 'Actor2Religion1Code', 'Actor2Religion2Code', 'Actor2Type1Code', 'Actor2Type2Code', 'Actor2Type3Code', 'IsRootEvent', 'EventCode', 'EventBaseCode', 'EventRootCode', 'QuadClass', 'GoldsteinScale', 'NumMentions', 'NumSources', 'NumArticles', 'AvgTone', 'Actor1Geo_Type', 'Actor1Geo_FullName', 'Actor1Geo_CountryCode', 'Actor1Geo_ADM1Code', 'Actor1Geo_Lat', 'Actor1Geo_Long', 'Actor1Geo_FeatureID', 'Actor2Geo_Type', 'Actor2Geo_FullName', 'Actor2Geo_CountryCode', 'Actor2Geo_ADM1Code', 'Actor2Geo_Lat', 'Actor2Geo_Long', 'Actor2Geo_FeatureID', 'ActionGeo_Type', 'ActionGeo_FullName', 'ActionGeo_CountryCode', 'ActionGeo_ADM1Code', 'ActionGeo_Lat', 'ActionGeo_Long', 'ActionGeo_FeatureID', 'DATEADDED']
 cnames_aft = ['GLOBALEVENTID', 'SQLDATE', 'MonthYear', 'Year', 'FractionDate', 'Actor1Code', 'Actor1Name', 'Actor1CountryCode', 'Actor1KnownGroupCode', 'Actor1EthnicCode', 'Actor1Religion1Code', 'Actor1Religion2Code', 'Actor1Type1Code', 'Actor1Type2Code', 'Actor1Type3Code', 'Actor2Code', 'Actor2Name', 'Actor2CountryCode', 'Actor2KnownGroupCode', 'Actor2EthnicCode', 'Actor2Religion1Code', 'Actor2Religion2Code', 'Actor2Type1Code', 'Actor2Type2Code', 'Actor2Type3Code', 'IsRootEvent', 'EventCode', 'EventBaseCode', 'EventRootCode', 'QuadClass', 'GoldsteinScale', 'NumMentions', 'NumSources', 'NumArticles', 'AvgTone', 'Actor1Geo_Type', 'Actor1Geo_FullName', 'Actor1Geo_CountryCode', 'Actor1Geo_ADM1Code', 'Actor1Geo_Lat', 'Actor1Geo_Long', 'Actor1Geo_FeatureID', 'Actor2Geo_Type', 'Actor2Geo_FullName', 'Actor2Geo_CountryCode', 'Actor2Geo_ADM1Code', 'Actor2Geo_Lat', 'Actor2Geo_Long', 'Actor2Geo_FeatureID', 'ActionGeo_Type', 'ActionGeo_FullName', 'ActionGeo_CountryCode', 'ActionGeo_ADM1Code', 'ActionGeo_Lat', 'ActionGeo_Long', 'ActionGeo_FeatureID', 'DATEADDED', 'SOURCEURL']
 
+#%%
 # Step 3: list of variables to be created in the final dataset:
 var_list = ['count_events_1', 'count_events_2', 'count_events_3', 'count_events_4', 'count_events_5', 'count_events_6', 'count_events_7', 'count_events_8',
 'count_events_9', 'count_events_10', 'count_events_11', 'count_events_12', 'count_events_13', 'count_events_14', 'count_events_15', 'count_events_16', 'count_events_17', 'count_events_18', 'count_events_19', 'count_events_20',
@@ -39,11 +44,14 @@ var_list = ['count_events_1', 'count_events_2', 'count_events_3', 'count_events_
 'count_events_8_opp', 'count_events_9_opp', 'count_events_10_opp', 'count_events_11_opp', 'count_events_12_opp', 'count_events_13_opp', 'count_events_14_opp',
 'count_events_15_opp', 'count_events_16_opp', 'count_events_17_opp', 'count_events_18_opp', 'count_events_19_opp', 'count_events_20_opp']
 
+#%%
+
 # Step 4: creating list of links of all GDELT events' files:
 links = requests.get('http://data.gdeltproject.org/events/index.html')
 links = BeautifulSoup(links.content, "html5lib") # processing its content
 links = links.find_all('a') # getting the links
 
+#%%
 # Step 5: creating (or loading) the list of files that have been already
 # downloaded + those that we do not want. This list is updated every 100
 # iterations of the loop and stored as "gdelt_downloaded_files.txt". It
@@ -61,7 +69,8 @@ except: # if the files does not exist (start from scratch)
     dfiles = ['md5sums', 'filesizes', 'GDELT.MASTERREDUCEDV2.1979-2013.zip']
     ii = 0
 
-# Step 4: looping over list of links obtained above:
+#%%
+# Step 6: looping over list of links obtained above:
 df_gdelt = pd.DataFrame()
 
 for l in links:
@@ -195,6 +204,7 @@ df_gdelt.to_csv(dfolder + 'gdelt_reshaped_' + str(ii) + '.txt', index=False)
 dfiles.append(str(ii))
 np.savetxt(dfolder + 'gdelt_downloaded_files.txt', dfiles, delimiter="\t", fmt="%s")
 
+#%%
 # Step 7: load all temp txt of the 100 iteration blocks and
 # append them together. As bulk files can contain events of other periods,
 # I collapse the data by country-year-month once again just to be sure.
@@ -223,6 +233,7 @@ for f in files:
     cc+=1
     del df # cleaning RAM
 
+#%%
 # Step 8: adding correct isocodes (GDELT uses the FIPS-2-digit isocode) to
 # match the masterfile:
 
@@ -233,10 +244,11 @@ df_gdelt = pd.merge(df_gdelt,ccodes,how='inner', left_on = 'ActionGeo_CountryCod
 # removing useless variables:
 df_gdelt =df_gdelt.drop(columns=['actiongeo_countrycode', 'ActionGeo_CountryCode'])
 
+#%%%
 # Step 9: removing the temp files with 100 iterations each:
 #files = [os.remove(dfolder + fname) for fname in files]
 
-# Step 10: Appending to the previously downloaded and processed data; saving
+#%%ep 10: Appending to the previously downloaded and processed data; saving
 # otherwise:
 print("\n****************\n\nDone! :) Exporting final dataset...\n")
 if 'final_gdelt_bycountry.txt' in os.listdir(dfolder):
