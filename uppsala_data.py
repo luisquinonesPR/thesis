@@ -6,12 +6,13 @@ import pandas as pd
 #pip install fiona
 import numpy as np
 import pandas as pd
-import geopandas as gpd
+#import geopandas as gpd
 import matplotlib.pyplot as plt
 import requests
 from io import BytesIO
 import shutil
 import zipfile
+import os
 #import osx
 
 path = os.getcwd()
@@ -45,18 +46,26 @@ print(df1.date_start.min())
 print(df1.date_start.max())
 df1.head()
 
+df1[['date_end', 'date_start']].head()
+
 
 # %%
 #####################################################################################################################
 # Data set 2
 #####################################################################################################################
 
+#Getting data from data folder
+
+df2 = pd.read_csv(path + '/data/candidates_120523.csv')
+
+#%
+# Downloading via API
+
 # Import and inspect UCDP Candidate data sets (2022-2023) via API
 # January to December 2022: Version 22.01.22.12
 # January 2023: Version 23.0.1
 # February 2023: Version 23.0.2 
 # March 2023: Version 23.0.3 
-
 
 link_prefix = 'https://ucdpapi.pcr.uu.se/api/gedevents/'
 # not yet available (on 3 May 23) but should be out soon: '23.0.4'
@@ -131,6 +140,9 @@ print(df_2.date_start.max())
 #df.iloc[3000]
 df_2.head()
 
+# Export to csv
+df_2.to_csv(path + '/data/candidates_120523.csv', index=False)
+
 
 # %%
 #####################################################################################################################
@@ -138,12 +150,13 @@ df_2.head()
 #####################################################################################################################
 
 #check they have the same column headings
-print(set(df1.columns) - set(df_2.columns))
+print(set(df1.columns) - set(df2.columns))
 
 #%%
 # Combine UCDP GED data set (1989-2021) and UCDP Candidate data sets (2022-2023)
-df_all = pd.concat([df1, df_2], ignore_index=True)
+df_all = pd.concat([df1, df2], ignore_index=True)
 
+#df_all = df1.copy()
 #%%
 print(df_all.shape)
 #print(df_all.columns)
@@ -232,15 +245,16 @@ df_all['where_description']
 #%%
 # Inspecting administration levels available per country
 
+# We group them without dropping nan values
+grouped_admin_overview = df_all.groupby('country')[['adm_1', 'adm_2']].nunique(dropna = False).reset_index() #(name='count')
+
 # There are a lot of missing values for the admin layers
 print('Missing values')
 print(df_all[['adm_1', 'adm_2', 'country']].isna().sum())
 print(grouped_admin_overview[['adm_1', 'adm_2', 'country']].isna().sum())
 
-# We group them without dropping nan values
-grouped_admin_overview = df_all.groupby('country')[['adm_1', 'adm_2']].nunique(dropna = False).reset_index() #(name='count')
 
-print(grouped_admin_overview.head())
+print(grouped_admin_overview.head(20))
 grouped_admin_overview.describe().applymap(lambda x: f"{x:0.2f}")
 
 
@@ -295,9 +309,37 @@ ax.set_xlabel('Country')
 ax.set_ylabel('Count')
 plt.show()
 
-
-
 # %%
+
+pd.set_option('display.max_columns', None)
+
+# Creating possible target features:
+df_all['best_state'] = np.where(df_all['type_of_violence'] == 1, df_all['best'], np.nan)
+df_all['best_nonstate'] = np.where(df_all['type_of_violence'] == 2, df_all['best'], np.nan)
+df_all['best_onesided'] = np.where(df_all['type_of_violence'] == 3, df_all['best'], np.nan)
+
+# Converting 'date_start' column to datetime
+df_all['date_start'] = pd.to_datetime(df_all['date_start'])
+
+# Fixing the number of sources
+df_all['number_of_sources'] = df_all['number_of_sources'].replace(-1, 0)
+
+# Group by month, adm_1, and country and aggregate variables
+grouped_df = df_all.groupby([df_all['date_start'].dt.month.rename('month'), df_all['date_start'].dt.year.rename('year'), 'adm_1', 'country', 'country_id', 'region']).agg({
+    'best_state': [('best_state','sum')],
+    'best_nonstate': [('best_nonstate','sum')],
+    'best_onesided': [('best_onesided','sum')],
+    'deaths_civilians': [('deaths_civilians','sum')],
+    'number_of_sources': [('number_of_sources','mean')],
+    'conflict_new_id': [('count_conflict_new_id', 'nunique'), ('freq_conflict_new_id', lambda x: x.value_counts().index[0])],
+    'dyad_new_id': [('count_dyad_new_id', 'nunique'), ('freq_dyad_new_id', lambda x: x.value_counts().index[0])]
+}).reset_index()
+
+grouped_df.columns = [col[1] if isinstance(col, tuple) and col[1] != '' else col[0] for col in grouped_df.columns]
+grouped_df.head(10)
+
+grouped_df.to_csv(path + '/data/ucdp_grouped.csv', index=False)
+
 #%%
 ##################################
 # OLD WAY OF GETTING DF1
