@@ -67,22 +67,22 @@ df2 = pd.read_csv(path + '/data/candidates_120523.csv')
 # February 2023: Version 23.0.2 
 # March 2023: Version 23.0.3 
 
-link_prefix = 'https://ucdpapi.pcr.uu.se/api/gedevents/'
+#link_prefix = 'https://ucdpapi.pcr.uu.se/api/gedevents/'
 # not yet available (on 3 May 23) but should be out soon: '23.0.4'
-link_suffixes = ['23.0.3', '23.0.2', '23.0.1', '22.01.22.12']
+#link_suffixes = ['23.0.3', '23.0.2', '23.0.1', '22.01.22.12']
 
-api_urls = []
+#api_urls = []
 
-for suffix in link_suffixes:
-    full_link = link_prefix + str(suffix)
-    api_urls.append(full_link)
+#for suffix in link_suffixes:
+#    full_link = link_prefix + str(suffix)
+#    api_urls.append(full_link)
 
-print(api_urls)
+#print(api_urls)
 
-params = {
-    'pagesize': 1000,
-    'page': 0
-}
+#params = {
+#    'pagesize': 1000,
+#    'page': 0
+#}
 #response = requests.get(api_url2, params=params)
 #print(response.status_code)
 
@@ -326,6 +326,7 @@ df_all['number_of_sources'] = df_all['number_of_sources'].replace(-1, 0)
 
 # Group by month, adm_1, and country and aggregate variables
 grouped_df = df_all.groupby([df_all['date_start'].dt.month.rename('month'), df_all['date_start'].dt.year.rename('year'), 'adm_1', 'country', 'country_id', 'region']).agg({
+    'best': [('best','sum')],
     'best_state': [('best_state','sum')],
     'best_nonstate': [('best_nonstate','sum')],
     'best_onesided': [('best_onesided','sum')],
@@ -336,9 +337,11 @@ grouped_df = df_all.groupby([df_all['date_start'].dt.month.rename('month'), df_a
 }).reset_index()
 
 grouped_df.columns = [col[1] if isinstance(col, tuple) and col[1] != '' else col[0] for col in grouped_df.columns]
-grouped_df.head(10)
 
+grouped_df['MonthYear'] = grouped_df.apply(lambda row: str(row['year']) + str(row['month']).zfill(2), axis=1)
 grouped_df.to_csv(path + '/data/ucdp_grouped.csv', index=False)
+
+grouped_df.head(10)
 
 #%%
 ##################################
