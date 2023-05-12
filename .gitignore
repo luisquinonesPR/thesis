@@ -161,3 +161,4 @@ cython_debug/
 data* 
 .DS_STORE
 ucdp_api_to_dataframe.csv
+country_codes_fips*
