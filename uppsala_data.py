@@ -48,6 +48,9 @@ df1.head()
 
 df1[['date_end', 'date_start']].head()
 
+#%%
+df1[df1['country'] == 'Syria']
+
 
 # %%
 #####################################################################################################################
@@ -58,91 +61,14 @@ df1[['date_end', 'date_start']].head()
 
 df2 = pd.read_csv(path + '/data/candidates_120523.csv')
 
-#%
-# Downloading via API
-
-# Import and inspect UCDP Candidate data sets (2022-2023) via API
-# January to December 2022: Version 22.01.22.12
-# January 2023: Version 23.0.1
-# February 2023: Version 23.0.2 
-# March 2023: Version 23.0.3 
-
-#link_prefix = 'https://ucdpapi.pcr.uu.se/api/gedevents/'
-# not yet available (on 3 May 23) but should be out soon: '23.0.4'
-#link_suffixes = ['23.0.3', '23.0.2', '23.0.1', '22.01.22.12']
-
-#api_urls = []
-
-#for suffix in link_suffixes:
-#    full_link = link_prefix + str(suffix)
-#    api_urls.append(full_link)
-
-#print(api_urls)
-
-#params = {
-#    'pagesize': 1000,
-#    'page': 0
-#}
-#response = requests.get(api_url2, params=params)
-#print(response.status_code)
-
 #%%
+print(df2.shape)
+#print(df1.columns)
+print(df2.date_start.min())
+print(df2.date_start.max())
+df2.head()
 
-# Initialise empty dataframe
-df_2 = pd.DataFrame()
-
-for url in api_urls:
-    response = requests.get(url, params=params)
-
-    # Check if request was successful
-    if response.status_code == 200:
-        json_data = response.json()
-        
-        # Get the total number of pages
-        total_pages = json_data['TotalPages']
-        
-        # Extract the 'Result' array from the JSON response
-        data = json_data['Result']
-
-        # Convert JSON data to a pandas dataframe
-        df2 = pd.DataFrame(data)
-
-        # Iterate through the rest of the pages and append data to the DataFrame
-        for page in range(1, total_pages + 1):
-            params['page'] = page
-            response = requests.get(url, params=params)
-            json_data = response.json()
-            data = json_data['Result']
-            temp_df = pd.DataFrame(data)
-            df2 = pd.concat([df2, temp_df], ignore_index=True)
-            
-            # Print progress
-            print(f"Page {page} of {total_pages} fetched")
-
-        # Save the DataFrame to a CSV file
-        #df2.to_csv('ucdp_api_to_dataframe.csv', index=False)
-
-        # Display the dataframe
-        print(df2)
-        # Attache df2 for this url to overall df_2
-        df_2 = pd.concat([df2,df_2], ignore_index=True)
-    else:
-        print(f"Error: {response.status_code}. {response.text}")
-
-
-#%%
-print(df_2.shape)
-#print(df_new.shape)
-
-#print(df2.columns)
-print(df_2.date_start.min())
-print(df_2.date_start.max())
-#df.iloc[3000]
-df_2.head()
-
-# Export to csv
-df_2.to_csv(path + '/data/candidates_120523.csv', index=False)
-
+df2[['date_end', 'date_start']].head()
 
 # %%
 #####################################################################################################################
@@ -243,6 +169,58 @@ df_all['where_description']
 
 
 #%%
+# DEATHS PER YEAR (and by type of violence)
+
+deaths_annual = df_all.groupby('year')[['best_state', 'best_nonstate', 'best_onesided']].sum()
+deaths_annual.head()
+#%%
+deaths_annual.plot(kind='bar', stacked=True, figsize=(10,6))
+plt.xlabel('Year')
+plt.ylabel('Total Amount')
+plt.title('Total Number of Deaths by Year')
+plt.show()
+
+#%%
+# Rwanda acccounts for 1994 outlier
+df_all[(df_all['best']>10000) & (df_all['type_of_violence']==3)]
+
+#%%
+# CONFLICT EVENTS PER YEAR (and by type of violence)
+
+confl_events_annual = df_all.groupby('year')['type_of_violence'].value_counts().unstack(fill_value=0)
+confl_events_annual = confl_events_annual.reset_index()
+confl_events_annual.columns = ['year', 'type_1', 'type_2', 'type_3']
+confl_events_annual = confl_events_annual.set_index('year')
+confl_events_annual.head()
+#%%
+confl_events_annual.plot(kind='bar', stacked=True)
+plt.xlabel('Year')
+plt.ylabel('Count')
+plt.title('Count of Each Type of Violence per Year')
+plt.show()
+
+#%%
+
+confl_regions_annual = df_all.groupby('year')['region'].value_counts().unstack(fill_value=0)
+
+confl_regions_annual = confl_regions_annual.reset_index()
+confl_regions_annual.columns = ['year', 'Africa', 'Americas', 'Asia', 'Europe', 'Middle East']
+confl_regions_annual = confl_regions_annual.set_index('year')
+
+confl_regions_annual.head()
+
+#%%
+confl_regions_annual.plot(kind='bar', stacked=True)
+plt.xlabel('Year')
+plt.ylabel('Count')
+plt.title('Breakdown of events by Region per Year')
+plt.show()
+
+
+#%% 
+
+
+#%%
 # Inspecting administration levels available per country
 
 # We group them without dropping nan values
@@ -277,6 +255,10 @@ print(set(countries_all) - set(countries_grouped))
 #for i in range(len(no_data_counrties)):
 #    print(df_all[df_all['country']==no_data_counrties[i]][['country','adm_1', 'adm_2']])
 
+#%%
+
+
+
 
 #%%
 # Inspecting adm1 (e.g. province) and adm2 (e.g. municipality)
@@ -289,12 +271,23 @@ print(grouped_admin1_detail.country.nunique(dropna=False))
 print(grouped_admin2_detail.country.nunique())
 print(grouped_admin2_detail.country.nunique(dropna=False))
 
+#%%
 # exmples for Angola: 18 adm1 and 149 adm2
+print(len(grouped_admin1_detail[grouped_admin1_detail['country']=='Angola']))
+
 print(grouped_admin1_detail[grouped_admin1_detail['country']=='Angola'])
-print(grouped_admin2_detail[grouped_admin2_detail['country']=='Angola'])
+#print(grouped_admin2_detail[grouped_admin2_detail['country']=='Angola'])
 
 #%%
-# exmples for Germany: 18 adm1 and 149 adm2
+# exmples for Brazil
+print(len(grouped_admin1_detail[grouped_admin1_detail['country']=='Brazil']))
+
+print(grouped_admin1_detail[grouped_admin1_detail['country']=='Brazil'])
+#print(grouped_admin2_detail[grouped_admin2_detail['country']=='Angola'])
+
+
+#%%
+# exmples for Germany: 
 print(grouped_admin1_detail[grouped_admin1_detail['country']=='Germany'])
 print(grouped_admin2_detail[grouped_admin2_detail['country']=='Germany'])
 
@@ -311,16 +304,22 @@ plt.show()
 
 # %%
 
-pd.set_option('display.max_columns', None)
+#pd.set_option('display.max_columns', None)
 
 # Creating possible target features:
 df_all['best_state'] = np.where(df_all['type_of_violence'] == 1, df_all['best'], np.nan)
 df_all['best_nonstate'] = np.where(df_all['type_of_violence'] == 2, df_all['best'], np.nan)
 df_all['best_onesided'] = np.where(df_all['type_of_violence'] == 3, df_all['best'], np.nan)
 
-# Converting 'date_start' column to datetime
-df_all['date_start'] = pd.to_datetime(df_all['date_start'])
 
+#%%
+# Conversion below didn't work for this entry becuase o
+df_all.iloc[29363]['date_start']  #'2020-01-06 00:00:00.000' while other had format ''2022-03-09T00:00:00''
+#%%
+# Converting 'date_start' column to datetime
+df_all['date_start'] = pd.to_datetime(df_all['date_start'], format='ISO8601')
+
+#%%
 # Fixing the number of sources
 df_all['number_of_sources'] = df_all['number_of_sources'].replace(-1, 0)
 
@@ -336,7 +335,13 @@ grouped_df = df_all.groupby([df_all['date_start'].dt.month.rename('month'), df_a
     'dyad_new_id': [('count_dyad_new_id', 'nunique'), ('freq_dyad_new_id', lambda x: x.value_counts().index[0])]
 }).reset_index()
 
+grouped_df.head()
+
+#%%
 grouped_df.columns = [col[1] if isinstance(col, tuple) and col[1] != '' else col[0] for col in grouped_df.columns]
+
+grouped_df.head()
+#%%%
 
 grouped_df['MonthYear'] = grouped_df.apply(lambda row: str(row['year']) + str(row['month']).zfill(2), axis=1)
 grouped_df.to_csv(path + '/data/ucdp_grouped.csv', index=False)
@@ -400,3 +405,91 @@ print(df.date_start.min())
 print(df.date_start.max())
 #df.iloc[3000]
 df.head()
+
+##################################
+# OLD WAY OF GETTING DF2
+##################################
+
+#%
+# Downloading via API
+
+# Import and inspect UCDP Candidate data sets (2022-2023) via API
+# January to December 2022: Version 22.01.22.12
+# January 2023: Version 23.0.1
+# February 2023: Version 23.0.2 
+# March 2023: Version 23.0.3 
+
+#link_prefix = 'https://ucdpapi.pcr.uu.se/api/gedevents/'
+# not yet available (on 3 May 23) but should be out soon: '23.0.4'
+#link_suffixes = ['23.0.3', '23.0.2', '23.0.1', '22.01.22.12']
+
+#api_urls = []
+
+#for suffix in link_suffixes:
+#    full_link = link_prefix + str(suffix)
+#    api_urls.append(full_link)
+
+#print(api_urls)
+
+#params = {
+#    'pagesize': 1000,
+#    'page': 0
+#}
+#response = requests.get(api_url2, params=params)
+#print(response.status_code)
+
+#%%
+
+# Initialise empty dataframe
+df_2 = pd.DataFrame()
+
+for url in api_urls:
+    response = requests.get(url, params=params)
+
+    # Check if request was successful
+    if response.status_code == 200:
+        json_data = response.json()
+        
+        # Get the total number of pages
+        total_pages = json_data['TotalPages']
+        
+        # Extract the 'Result' array from the JSON response
+        data = json_data['Result']
+
+        # Convert JSON data to a pandas dataframe
+        df2 = pd.DataFrame(data)
+
+        # Iterate through the rest of the pages and append data to the DataFrame
+        for page in range(1, total_pages + 1):
+            params['page'] = page
+            response = requests.get(url, params=params)
+            json_data = response.json()
+            data = json_data['Result']
+            temp_df = pd.DataFrame(data)
+            df2 = pd.concat([df2, temp_df], ignore_index=True)
+            
+            # Print progress
+            print(f"Page {page} of {total_pages} fetched")
+
+        # Save the DataFrame to a CSV file
+        #df2.to_csv('ucdp_api_to_dataframe.csv', index=False)
+
+        # Display the dataframe
+        print(df2)
+        # Attache df2 for this url to overall df_2
+        df_2 = pd.concat([df2,df_2], ignore_index=True)
+    else:
+        print(f"Error: {response.status_code}. {response.text}")
+
+#%%
+print(df_2.shape)
+#print(df_new.shape)
+
+#print(df2.columns)
+print(df_2.date_start.min())
+print(df_2.date_start.max())
+#df.iloc[3000]
+df_2.head()
+
+# Export to csv
+df_2.to_csv(path + '/data/candidates_120523.csv', index=False)
