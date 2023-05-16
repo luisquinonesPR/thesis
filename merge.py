@@ -21,21 +21,23 @@ gdelt['year'].max()
 
 #%%
 # Grouping UCDP by country to merge
-ucdp_country = ucdp.groupby(['MonthYear', 'country', 'month', 'year']).agg(
+ucdp_country = ucdp.groupby(['MonthYear', 'country', 'month', 'year', 'region']).agg(
     deaths = ('best', 'sum'),
     state_deaths = ('best_state','sum'),
     nonstate_deaths = ('best_nonstate','sum'),
     onesided_deaths = ('best_onesided','sum'),
-    civilian_deaths = ('deaths_civilians','sum')).reset_index()
+    civilian_deaths = ('deaths_civilians','sum'),
+    avg_sources = ('number_of_sources', 'mean'), 
+    conflict_counts = ('count_conflict_new_id', 'sum'),
+    conflict_freq = ('freq_conflict_new_id', lambda x: x.value_counts().index[0]),
+    dyad_counts = ('count_dyad_new_id', 'sum'),
+    dyad_freq = ('freq_dyad_new_id', lambda x: x.value_counts().index[0])).reset_index()
 
 ucdp_country.head(10)
 
 # Regex to make merging easier
 
 ucdp_country['country'] = ucdp_country['country'].str.replace(r"\([^()]*\)", "").str.strip()
-
-#%%
-ucdp_country[ucdp_country.duplicated(subset=['country', 'MonthYear'], keep=False)]
 
 #%%
 # Grouping GDELT by country to merge
@@ -46,8 +48,25 @@ count_events_cols = gdelt.filter(like='count_events').columns.tolist()
 
 gdelt_country = gdelt.groupby(['MonthYear', 'isocode', 'month', 'year'])[count_events_cols].sum().reset_index()
 
-gdelt_country.head(10)
+gdelt_country2 = gdelt.groupby(['MonthYear', 'isocode', 'month', 'year']).agg(
+    Actor1Code_avgcount = ('Actor1Code_count', 'mean'),
+    Actor1CountryCode_avgcount = ('Actor1CountryCode_count','mean'),
+    Actor1KnownGroupCode_avgcount = ('Actor1KnownGroupCode_count','mean'),
+    Actor1Type1Code_avgcount = ('Actor1Type1Code_count','mean'),
+    Actor2Code_avgcount = ('Actor2Code_count','mean'),
+    Actor2CountryCode_avgcount = ('Actor2CountryCode_count', 'mean'), 
+    Actor2KnownGroupCode_avgcount = ('Actor2KnownGroupCode_count', 'mean'),
+    Actor2Type1Code_avgcount = ('Actor2Type1Code_count', 'mean'),
+    AvgGoldsteinScale = ('AvgGoldsteinScale', 'mean')).reset_index()
 
+gdelt_country2.head(10)
+
+#%%
+# Putting the gdelt groupbys together
+
+gdelt_country = pd.merge(gdelt_country, gdelt_country2, on=['MonthYear', 'isocode', 'month', 'year'], how='inner')
+
+gdelt_country.head(10)
 #%%
 # Using pycountry to get ISO codes from the name
 
@@ -90,5 +109,3 @@ full_df = pd.merge(gdelt_country, ucdp_country, on=['isocode', 'MonthYear', 'mon
 full_df.head(10)
 
 full_df.to_csv(path + '/data/merged.csv', index=False)
-
-# %%
