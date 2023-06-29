@@ -1,25 +1,24 @@
-# loading libraries 
+def calculate_escalation(df):
+    df['lag_deaths'] = df.groupby('isocode')['deaths'].shift(1)
 
-import matplotlib as plt
-import pandas as pd
-import os
-import pycountry
-import string
-from unidecode import unidecode
-import category_encoders as ce
+    df['delta_deaths'] = np.where((df['lag_deaths'] == 0) & (df['deaths'] == 0), 0,
+                                  np.where((df['lag_deaths'] == 0) & (df['deaths'] != 0), np.inf,
+                                           np.where((df['lag_deaths']).isna() == True, 0,
+                                                    (df['deaths'] - df['lag_deaths']) / df['lag_deaths'])))
 
-path = os.getcwd()
+    # Group the data by 'isocode' and calculate the 75th percentile of the previous 24 months' delta_deaths
+    df['threshold'] = df.groupby('isocode')['delta_deaths'].transform(lambda x: x.shift(1).rolling(window=24, min_periods=1).quantile(0.75))
+    df['threshold'] = df['threshold'].fillna(0)
 
-# loading the data
+    # Check if the current month's delta_deaths exceeds the threshold or is infinity
+    df['escalation'] = (df['deaths'] >= 0.05) & ((df['delta_deaths'] > df['threshold']) | (df['delta_deaths'] == np.inf))
+    df['escalation'] = df['escalation'].astype(int)
 
-full = pd.read_csv(path + '/data/merged.csv')
+    return df
 
-# Dropping columns before 1989
-full.drop(full.loc[full['year']<1989].index, inplace=True)
+true_counts = df['escalation'].sum()
+total_counts = df['escalation'].count()
+percentage_true = (true_counts / total_counts) * 100
 
-# Filling missing UCDP data with 0
-full[["deaths","state_deaths","nonstate_deaths","onesided_deaths","civilian_deaths","avg_sources","conflict_counts",
-     "conflict_freq","dyad_counts","dyad_freq"]] = full[["deaths","state_deaths","nonstate_deaths","onesided_deaths",
-                                                         "civilian_deaths","avg_sources","conflict_counts",
-                                                         "conflict_freq","dyad_counts","dyad_freq"]].fillna(0)
-
+summary_table = pd.DataFrame({'True Count': pd.Series(true_counts), 'Percentage True': pd.Series(percentage_true)})
+print(summary_table)
