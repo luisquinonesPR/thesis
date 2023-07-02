@@ -163,3 +163,4 @@ data*
 ucdp_api_to_dataframe.csv
 country_codes_fips*
 ons_target*
+lstm_saved_models*
