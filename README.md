@@ -34,7 +34,7 @@ The research uses monthly data from the year 2000 onwards. The final dataset con
 
 The conflict is predicted based on a binary classification where 50 deaths per 100,000 individuals signifies a conflict. Escalation is defined as months in which the number of deaths increases significantly compared to historical patterns, surpassing the threshold of 0.05 deaths and exceeding the 75th percentile of the previous 24 months' percentage change in deaths. The models predict this classification across various countries using the above-mentioned features. 
 
-We also predict a regression target where we set a `deaths_all_pc`target, where we predict the number of deaths per capita at time t , t + 3 and t + 6. 
+We also predict a regression target where we set a `deaths_all_pc` target, where we predict the number of deaths per capita at time t , t + 3 and t + 6. 
 
 ## Disclaimer
 
